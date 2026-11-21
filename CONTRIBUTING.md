@@ -30,6 +30,7 @@ Optionally, run the same checks before every commit:
 - `src/pandera_chem/checks.py`: the checks. Each is a function that returns a `pandera.Check`.
 - `src/pandera_chem/quarantine.py`: `split()` and its report.
 - `src/pandera_chem/_mol.py`: parsing, shared and cached by every check.
+- `src/pandera_chem/config.py`: rules files; `report.py`: report cards; `cli.py`: the command line.
 - `examples/`: every example in the README and `docs/usage.md`; `tests/test_examples.py` runs each
   one and checks the page shows exactly its code and what it prints. Add a script there for any new
   example, mark it in the page with `<!-- example: examples/name.py -->`, and paste its output.
@@ -43,7 +44,8 @@ Optionally, run the same checks before every commit:
 4. **Accept `**options`** and pass them to `pa.Check`, and give the check a `name` (used as the reason)
    and a `description`.
 5. **Test it** with molecules that pass, molecules that fail, and an unreadable SMILES.
-6. Give it a Google-style docstring, add it to `__init__.py`, the README's table and `CHANGELOG.md`.
+6. Give it a Google-style docstring, add it to `__init__.py`, to `CHEM_CHECKS` in `config.py` (so
+   rules files can name it), the README's table and `CHANGELOG.md`.
 
 Keep each pull request to one change. By contributing you agree that your code is released under the
 MIT licence. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).

@@ -1,6 +1,6 @@
 [project]
 name = "pandera-chem"
-version = "0.1.1"
+version = "0.2.0"
 description = "Chemistry checks for Pandera: validate tables of molecules with RDKit, and quarantine the bad rows with their reasons"
 readme = "README.md"
 authors = [
@@ -24,7 +24,11 @@ classifiers = [
 dependencies = [
     "pandera[pandas]>=0.24",
     "rdkit>=2024.9",
+    "pyyaml>=6.0",
 ]
+
+[project.scripts]
+pandera-chem = "pandera_chem.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.13.4,<0.14.0"]
@@ -66,3 +70,4 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 fail_under = 95
+omit = ["*/pandera_chem/__main__.py"]

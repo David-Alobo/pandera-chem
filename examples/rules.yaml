@@ -1,0 +1,17 @@
+# Rules for a table of measured compounds.
+columns:
+  compound_id:
+    dtype: str
+    unique: true
+  smiles:
+    dtype: str
+    checks:
+      - valid_smiles
+      - allowed_elements
+      - single_fragment
+      - unique_molecules
+      - stereo_defined: {raise_warning: true}
+  pic50:
+    dtype: float
+    checks:
+      - in_range: {min_value: 0, max_value: 14}

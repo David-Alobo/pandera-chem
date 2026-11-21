@@ -12,6 +12,9 @@ this page shows exactly the code and what it prints.
 - [4. Rules for a screening library](#4-rules-for-a-screening-library)
 - [5. A table that stores InChIKeys](#5-a-table-that-stores-inchikeys)
 - [6. A check of your own](#6-a-check-of-your-own)
+- [7. Rules in a file](#7-rules-in-a-file)
+- [8. From the command line](#8-from-the-command-line)
+- [9. In continuous integration](#9-in-continuous-integration)
 - [Things to know](#things-to-know)
 
 ## Install
@@ -295,6 +298,159 @@ print(pc.split(df, schema).quarantined.to_string())
 ```
 
 If it would be useful to others, [suggest it](https://github.com/David-Alobo/pandera-chem/issues/new?template=feature.yml).
+
+## 7. Rules in a file
+
+Rules written in Python live in your code. Rules in a YAML file can sit next to the data, be
+reviewed like any other change, and be used by people who do not write Python. A rules file has:
+
+- `columns`: each column's name, and under it any of
+  - `dtype`: `str`, `float`, `int` or `bool`;
+  - `checks`: a list of checks;
+  - `nullable` (default `false`), `unique` (default `false`), `required` (default `true`),
+    `coerce` (default `false`) and `description`;
+- `checks` (optional): table-wide checks, such as `inchikey_matches`;
+- `strict` (optional): `true` to refuse columns the rules do not name.
+
+Each check is its **name** (`valid_smiles`) or its **name with its arguments**
+(`heavy_atoms: {min_value: 6, max_value: 50}`), using the same arguments as in Python, including
+Pandera's options such as `raise_warning: true`. Pandera's own `in_range`, `isin`, `notin`, `gt`, `ge`,
+`lt`, `le`, `eq`, `ne` and `str_matches`/`str_contains`/`str_startswith`/`str_endswith`/`str_length`
+can be used too. Here is the rules file used in the [README](../README.md#rules-files-and-the-command-line):
+
+<!-- file: examples/rules.yaml -->
+```yaml
+# Rules for a table of measured compounds.
+columns:
+  compound_id:
+    dtype: str
+    unique: true
+  smiles:
+    dtype: str
+    checks:
+      - valid_smiles
+      - allowed_elements
+      - single_fragment
+      - unique_molecules
+      - stereo_defined: {raise_warning: true}
+  pic50:
+    dtype: float
+    checks:
+      - in_range: {min_value: 0, max_value: 14}
+```
+
+`pc.load_schema()` turns it into an ordinary Pandera schema, and `pc.report_html()` and
+`pc.report_json()` write the report card:
+
+<!-- example: examples/rules_file.py -->
+```python
+from pathlib import Path
+
+import pandas as pd
+
+import pandera_chem as pc
+
+HERE = Path(__file__).parent
+schema = pc.load_schema(HERE / "rules.yaml")
+table = pd.read_csv(HERE / "compounds.csv")
+
+result = pc.split(table, schema)
+Path("report.html").write_text(pc.report_html(result, source="compounds.csv"), encoding="utf-8")
+Path("report.json").write_text(pc.report_json(result, source="compounds.csv"), encoding="utf-8")
+
+print(result.report.rows_valid, "valid rows;", result.report.rows_quarantined, "quarantined")
+print(pc.report_dict(result)["by_reason"])
+```
+
+```text
+2 valid rows; 5 quarantined
+{'smiles: allowed_elements': 2, 'smiles: valid_smiles': 1, 'smiles: single_fragment': 1, 'smiles: unique_molecules': 1, 'pic50: in_range(0, 14)': 1}
+```
+
+A mistake in the rules stops before any data is checked, with a message that says where: a check
+name that does not exist (`unknown check 'valid_smile'`), an argument it does not take
+(`heavy_atoms: unknown arguments ['min']`), or a dtype that is not one of the four.
+
+## 8. From the command line
+
+Installing pandera-chem also installs a `pandera-chem` command (or run `python -m pandera_chem`).
+Start with a rules file to edit:
+
+```bash
+pandera-chem init                # writes rules.yaml, with a comment on every line
+```
+
+Then check a data file against it:
+
+<!-- command: pandera-chem check examples/compounds.csv --rules examples/rules.yaml --out report -->
+```bash
+pandera-chem check examples/compounds.csv --rules examples/rules.yaml --out report
+```
+
+```text
+7 rows in: 2 valid, 5 quarantined
+       2  smiles: allowed_elements
+       1  smiles: valid_smiles
+       1  smiles: single_fragment
+       1  smiles: unique_molecules
+       1  pic50: in_range(0, 14)
+  warning: Column 'smiles' failed element-wise validator number 4: <Check stereo_defined> failure cases: CC(C)Cc1ccc(cc1)C(C)C(=O)O
+wrote report/compounds.{valid.csv,quarantine.csv,report.html,report.json}
+FAIL: 71.4% of rows quarantined (allowed: 0.0%)
+```
+
+In the output folder (`--out`, default `pandera-chem-out`):
+
+| File | What it holds |
+|---|---|
+| `compounds.valid.csv` | the rows that passed |
+| `compounds.quarantine.csv` | the rows that failed, with a `reasons` column |
+| `compounds.report.html` | the report card: open it in a browser, attach it to a CI run or email it |
+| `compounds.report.json` | the same counts for programs |
+
+**Exit codes**, for scripts and CI: `0` when the share of quarantined rows is within
+`--max-quarantined`, `1` when it is above it, and `2` when the file or the rules cannot be used
+(a missing file, a mistake in the rules, a column the rules need but the file lacks). The default
+`--max-quarantined` is `0`: any bad row fails the run. `--max-quarantined 0.05` allows up to 5%.
+
+**Files it reads:**
+
+- `.csv`, and `.tsv` or `.txt` (tab-separated). Every column is read as text, so identifiers keep
+  their leading zeros; columns the rules give a `float` or `int` dtype are converted to numbers,
+  and text that is not a number (such as `n/a`) becomes empty, so the column's `nullable` setting
+  decides whether that row is quarantined.
+- `.parquet`, with `pyarrow` installed (`pip install pyarrow`).
+- `.sdf`: one row per record, its SMILES in a `smiles` column (or `--smiles-column`) and its data
+  fields as the other columns. No record is dropped: one RDKit cannot read keeps its data fields and
+  an empty or unsanitised SMILES, so `valid_smiles` quarantines it and you can see which it was.
+
+## 9. In continuous integration
+
+Because the command fails with exit code 1, it can guard a repository of data: a pull request that
+adds bad records fails, and the report card is kept with the run. A GitHub Actions job:
+
+```yaml
+# .github/workflows/data.yml
+name: data quality
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pandera-chem
+      - run: pandera-chem check data/compounds.csv --rules data/rules.yaml --out report
+      - uses: actions/upload-artifact@v4
+        if: always()   # keep the report card when the check fails, too
+        with:
+          name: data-quality-report
+          path: report/
+```
+
+To allow a small share of bad rows while they are being fixed, add `--max-quarantined 0.02`.
 
 ## Things to know
 

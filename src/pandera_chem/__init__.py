@@ -14,6 +14,7 @@ Quick start::
 """
 
 from ._mol import clear_cache, inchikey, problems
+from ._version import __version__
 from .checks import (
     INCHIKEY,
     ORGANIC,
@@ -29,14 +30,15 @@ from .checks import (
     unique_molecules,
     valid_smiles,
 )
+from .config import RulesError, load_schema, schema_from_dict
 from .quarantine import Report, Split, split
-
-__version__ = "0.1.1"
+from .report import report_dict, report_html, report_json
 
 __all__ = [
     "INCHIKEY",
     "ORGANIC",
     "Report",
+    "RulesError",
     "Split",
     "allowed_elements",
     "clear_cache",
@@ -44,13 +46,19 @@ __all__ = [
     "inchikey",
     "inchikey_format",
     "inchikey_matches",
+    "load_schema",
     "mol_weight",
     "neutral",
     "no_substructures",
     "problems",
+    "report_dict",
+    "report_html",
+    "report_json",
+    "schema_from_dict",
     "single_fragment",
     "split",
     "stereo_defined",
     "unique_molecules",
     "valid_smiles",
+    "__version__",
 ]

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+### Added
+
+- **Rules files**: `load_schema("rules.yaml")` and `schema_from_dict()` build a Pandera schema from
+  YAML, naming pandera-chem's checks and a set of Pandera's own. A mistake (an unknown check, an
+  argument a check does not take, a wrong dtype) stops with a message that says where.
+- **Report cards**: `report_html()` writes one self-contained web page (counts, reasons with bars,
+  warnings, the quarantined rows; light and dark); `report_json()` and `report_dict()` give the same
+  for programs.
+- **Command line**: `pandera-chem check data.csv --rules rules.yaml` writes the valid rows, the
+  quarantined rows and the report card, and exits 0, 1 (more quarantined than `--max-quarantined`)
+  or 2 (unusable input), so it can gate CI. Reads CSV, TSV, Parquet and SDF (no SDF record is
+  dropped, and each keeps its data fields). `pandera-chem init` writes a starter rules file.
+- Usage guide sections on rules files, the command line and a GitHub Actions job; every file and
+  command shown is checked by the tests.
+
+### Changed
+
+- Depends on PyYAML.
+
 ## 0.1.1 (21 November 2026)
 
 ### Fixed

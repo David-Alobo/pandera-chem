@@ -1,0 +1,8 @@
+compound_id,smiles,pic50
+C1,CC(=O)Oc1ccccc1C(=O)O,5.2
+C2,OC(=O)c1ccccc1OC(C)=O,5.4
+C3,c1ccc2ccccc2c1,4.1
+C4,c1ccccc,6.0
+C5,C[Se]c1ccccc1,5.0
+C6,CC(=O)[O-].[Na+],3.2
+C7,CC(C)Cc1ccc(cc1)C(C)C(=O)O,15.0

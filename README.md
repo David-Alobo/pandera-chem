@@ -118,9 +118,61 @@ compound_id                                           reasons
 The checks work in plain Pandera too: `schema.validate(table)` raises an error naming the check that
 failed, as Pandera always does.
 
+## Rules files and the command line
+
+The same rules can live in a YAML file next to your data, and be run without writing Python. Each
+check is a name, or a name with its arguments:
+
+<!-- file: examples/rules.yaml -->
+```yaml
+# Rules for a table of measured compounds.
+columns:
+  compound_id:
+    dtype: str
+    unique: true
+  smiles:
+    dtype: str
+    checks:
+      - valid_smiles
+      - allowed_elements
+      - single_fragment
+      - unique_molecules
+      - stereo_defined: {raise_warning: true}
+  pic50:
+    dtype: float
+    checks:
+      - in_range: {min_value: 0, max_value: 14}
+```
+
+<!-- command: pandera-chem check examples/compounds.csv --rules examples/rules.yaml --out report -->
+```bash
+pandera-chem check examples/compounds.csv --rules examples/rules.yaml --out report
+```
+
+```text
+7 rows in: 2 valid, 5 quarantined
+       2  smiles: allowed_elements
+       1  smiles: valid_smiles
+       1  smiles: single_fragment
+       1  smiles: unique_molecules
+       1  pic50: in_range(0, 14)
+  warning: Column 'smiles' failed element-wise validator number 4: <Check stereo_defined> failure cases: CC(C)Cc1ccc(cc1)C(C)C(=O)O
+wrote report/compounds.{valid.csv,quarantine.csv,report.html,report.json}
+FAIL: 71.4% of rows quarantined (allowed: 0.0%)
+```
+
+It writes the valid rows, the quarantined rows with their reasons, and a **report card**: a web page
+with the counts, the reasons and the bad rows, and the same as JSON. It ends with exit code 1 when
+more rows are quarantined than `--max-quarantined` allows (none, unless you say otherwise), so it can
+stop a CI job. It reads CSV, TSV, Parquet and SDF files. `pandera-chem init` writes a starter rules
+file to edit.
+
+<p align="center"><img src=".github/report-card.png" alt="The report card for the example: 7 rows in, 2 valid, 5 quarantined, 1 warning, counts reconcile; a table of reasons with bars; the warning; and the quarantined rows with their reasons." width="85%"></p>
+
 **Next: the [usage guide](docs/usage.md)** shows checking strictly, running pandera-chem in a
 pipeline (saving the quarantine, logging, stopping a bad run), rules for a screening library,
-tables with InChIKeys, and writing a check of your own.
+tables with InChIKeys, writing a check of your own, rules files and the command line in detail, and
+a GitHub Actions job.
 
 ## The checks
 
@@ -145,8 +197,13 @@ On InChIKeys:
 | `inchikey_format()` | the value is not shaped like a standard InChIKey |
 | `inchikey_matches("smiles", "inchikey")` | (table-wide) a row's InChIKey is not the one its SMILES gives |
 
+Every check can be named in a rules file, as can Pandera's own `in_range`, `isin`, `notin`, `gt`,
+`ge`, `lt`, `le`, `eq`, `ne` and `str_*` checks.
+
 Helpers: `pc.problems(smiles)` says why a SMILES cannot be read, in RDKit's words;
-`pc.inchikey(smiles)` gives its standard InChIKey; `pc.clear_cache()` frees the parsed molecules.
+`pc.inchikey(smiles)` gives its standard InChIKey; `pc.clear_cache()` frees the parsed molecules;
+`pc.load_schema(path)` builds a schema from a rules file; `pc.report_html(result)` and
+`pc.report_json(result)` make the report card.
 
 ## How it works
 
@@ -170,7 +227,7 @@ Ideas for later versions; [suggest one](https://github.com/David-Alobo/pandera-c
 - Polars data frames, which Pandera also supports.
 - The ChEMBL structure checker as a check, with a penalty threshold.
 - Pydantic types for single records (`SMILES`, `InChIKey`).
-- Checks registered by name, so schemas can be written in YAML.
+- Structure pictures of the quarantined molecules in the report card.
 
 ## Learn the ideas behind it
 
