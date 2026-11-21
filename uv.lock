@@ -538,7 +538,7 @@ pandas = [
 
 [[package]]
 name = "pandera-chem"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "pandera", extra = ["pandas"] },

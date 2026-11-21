@@ -31,7 +31,7 @@ from .checks import (
 )
 from .quarantine import Report, Split, split
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "INCHIKEY",
