@@ -1,0 +1,29 @@
+name: Bug report
+description: A check gives the wrong answer, an error, or something else does not work.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: For example "valid_smiles() fails this SMILES, but RDKit reads it".
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: A small example that shows it
+      description: The SMILES (or a few rows of the table), the schema, and the full error message if there is one.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        Paste what this prints:
+        `python -c "import sys, pandera, rdkit, pandera_chem; print(sys.version, pandera.__version__, rdkit.__version__, pandera_chem.__version__)"`
+      render: text
+    validations:
+      required: true

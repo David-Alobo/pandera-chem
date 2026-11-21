@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Learn how the checks work
+    url: https://monstrous.com.ng/learn/
+    about: The free course behind pandera-chem builds these checks step by step (Modules 6, 10 and 12).

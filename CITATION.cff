@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use pandera-chem in your work, please cite it as below."
+title: "pandera-chem: chemistry checks for Pandera"
+type: software
+authors:
+  - family-names: Alobo
+    given-names: David Obeh
+    affiliation: Monstrous Data
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/David-Alobo/pandera-chem"
+keywords:
+  - cheminformatics
+  - data validation
+  - data quality
+  - pandera
+  - rdkit

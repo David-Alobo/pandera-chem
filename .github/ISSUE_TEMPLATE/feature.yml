@@ -1,0 +1,23 @@
+name: Suggest a check or feature
+description: A check you need, or a way to make pandera-chem easier to use.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you need to check, and why?
+      description: Describe the problem in your data, for example "assay values reported in mixed units".
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Examples
+      description: A few SMILES or rows that should pass, and a few that should fail.
+      render: text
+  - type: textarea
+    id: how
+    attributes:
+      label: How would you like to write it?
+      description: Optional. For example `pc.max_rotatable_bonds(10)`.
+      render: python

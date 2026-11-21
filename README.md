@@ -1,17 +1,29 @@
-# pandera-chem
+<p align="center">
+  <img src=".github/banner.png" alt="pandera-chem: chemistry checks for Pandera. Validate tables of molecules with RDKit, and quarantine the bad rows with their reasons." width="100%">
+</p>
 
-[![tests](https://github.com/David-Alobo/pandera-chem/actions/workflows/ci.yml/badge.svg)](https://github.com/David-Alobo/pandera-chem/actions/workflows/ci.yml)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+<p align="center">
+  <a href="https://github.com/David-Alobo/pandera-chem/actions/workflows/ci.yml"><img src="https://github.com/David-Alobo/pandera-chem/actions/workflows/ci.yml/badge.svg" alt="Tests"></a>
+  <img src="https://img.shields.io/badge/python-3.11_%7C_3.12_%7C_3.13-3776ab" alt="Python 3.11, 3.12, 3.13">
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT licence"></a>
+  <a href="CITATION.cff"><img src="https://img.shields.io/badge/cite-CITATION.cff-7c5cff" alt="Cite"></a>
+</p>
 
 **Chemistry checks for [Pandera](https://pandera.readthedocs.io/).** Validate tables of molecules
 with [RDKit](https://www.rdkit.org/) inside the data pipeline you already have, and set the bad rows
 aside with the reason each one failed, instead of crashing or losing them.
 
-Pandera checks the columns of a table: types, ranges, uniqueness. pandera-chem adds checks that
-understand what is *in* a SMILES column: whether each molecule can be read, which elements it
-contains, whether it is a salt or a mixture, whether it is charged, whether its stereochemistry is
-given, and whether the same molecule appears twice under different SMILES.
+## Why
+
+Chemical tables arrive with problems a type check cannot see: SMILES that RDKit cannot read, salts
+and mixtures, unexpected elements, charged forms, missing stereochemistry, and the same molecule
+twice under different SMILES. The usual fix is a loop that drops what fails to parse, and the
+records vanish with no reason recorded.
+
+pandera-chem turns those problems into Pandera checks, so they sit in the same schema as your other
+rules (types, ranges, units), and adds `split()`, which keeps the good rows, sets the bad ones aside
+with their reasons, and gives you counts that must add up.
 
 ## Install
 
@@ -19,8 +31,7 @@ given, and whether the same molecule appears twice under different SMILES.
 pip install pandera-chem
 ```
 
-or, with [uv](https://docs.astral.sh/uv/): `uv add pandera-chem`. It needs Python 3.11 or newer, and
-installs Pandera and RDKit for you.
+or `uv add pandera-chem`. It needs Python 3.11 or newer, and installs Pandera and RDKit.
 
 ## Example
 
@@ -94,20 +105,20 @@ compound_id                                           reasons
 ['the SMILES could not be read']
 ```
 
-- `result.valid` holds the rows that passed (aspirin and naphthalene), ready for the next step.
-- `result.quarantined` holds the rest, unchanged, with a `reasons` column: save it, fix the records
+- **`result.valid`**: the rows that passed (aspirin and naphthalene), ready for the next step.
+- **`result.quarantined`**: the rest, unchanged, with a `reasons` column. Save it, fix the records
   and run them again.
-- `result.report` has the counts, and `result.report.reconciles` is `True` when every row is
-  accounted for (rows in = valid + quarantined). Log it with every run.
-- Ibuprofen passed with a warning: its stereocentre is not given, which you may accept for a
-  racemate. Any check can be made a warning with `raise_warning=True`.
+- **`result.report`**: the counts. `result.report.reconciles` is `True` when every row is accounted
+  for (rows in = valid + quarantined); log it with every run.
+- Ibuprofen passed with a **warning**: its stereocentre is not given, which you may accept for a
+  racemate. Any check becomes a warning with `raise_warning=True`.
 
-The checks also work in plain Pandera: `schema.validate(table)` raises an error naming the check that
+The checks work in plain Pandera too: `schema.validate(table)` raises an error naming the check that
 failed, as Pandera always does.
 
 ## The checks
 
-Put these on a column of SMILES (the last two are for InChIKeys):
+On a column of SMILES:
 
 | Check | Fails when |
 |---|---|
@@ -120,48 +131,58 @@ Put these on a column of SMILES (the last two are for InChIKeys):
 | `mol_weight(max_value, min_value=0)` | the largest fragment is too light or too heavy (g/mol) |
 | `no_substructures({"name": "SMARTS", ...})` | the molecule contains one of the given groups |
 | `unique_molecules()` | the same molecule appeared in an earlier row, even as a different SMILES |
-| `inchikey_format()` | (InChIKey column) the value is not shaped like a standard InChIKey |
+
+On InChIKeys:
+
+| Check | Fails when |
+|---|---|
+| `inchikey_format()` | the value is not shaped like a standard InChIKey |
 | `inchikey_matches("smiles", "inchikey")` | (table-wide) a row's InChIKey is not the one its SMILES gives |
 
-**One reason per problem.** Only `valid_smiles()` fails a SMILES that cannot be read; every other
-check lets it pass. So a broken record is reported once, as unreadable, not under every check.
+Helpers: `pc.problems(smiles)` says why a SMILES cannot be read, in RDKit's words;
+`pc.inchikey(smiles)` gives its standard InChIKey; `pc.clear_cache()` frees the parsed molecules.
 
-Every check accepts Pandera's own options, for example `raise_warning=True` or `n_failure_cases=10`.
-Each distinct SMILES is parsed once and reused by all the checks; call `pc.clear_cache()` after a very
-large table to free the memory.
+## How it works
 
-`pc.problems(smiles)` says why a SMILES cannot be read, in RDKit's words, and `pc.inchikey(smiles)`
-gives its standard InChIKey.
+- **One reason per problem.** Only `valid_smiles()` fails a SMILES that cannot be read; every other
+  check lets it pass. A broken record is reported once, as unreadable, not under every check.
+- **Each SMILES is read once.** All the checks share one cache of parsed molecules, so five checks on
+  a column cost about one parse per distinct SMILES. Call `pc.clear_cache()` after a very large table.
+- **Pandera's own options work.** Every check accepts them: `raise_warning=True`,
+  `n_failure_cases=10` and so on.
+- **Nothing is changed.** pandera-chem checks molecules; it never alters them. To repair records
+  (strip salts, neutralise charges, pick one tautomer), use RDKit's
+  [MolStandardize](https://www.rdkit.org/docs/source/rdkit.Chem.MolStandardize.rdMolStandardize.html)
+  or the [ChEMBL structure pipeline](https://github.com/chembl/ChEMBL_Structure_Pipeline) first, then
+  check the result. For a web page that validates an uploaded file, see
+  [ChemAudit](https://nfdi4chem.de/introducing-chemaudit/).
 
-## What it is not
+## Roadmap
 
-pandera-chem checks molecules; it does not change them. To repair records (strip salts, neutralise
-charges, pick one tautomer), use RDKit's
-[MolStandardize](https://www.rdkit.org/docs/source/rdkit.Chem.MolStandardize.rdMolStandardize.html)
-or the [ChEMBL structure pipeline](https://github.com/chembl/ChEMBL_Structure_Pipeline) first, then
-check the result with pandera-chem. For a web page that validates an uploaded file, see
-[ChemAudit](https://nfdi4chem.de/introducing-chemaudit/).
+Ideas for later versions; [suggest one](https://github.com/David-Alobo/pandera-chem/issues/new?template=feature.yml).
+
+- Polars data frames, which Pandera also supports.
+- The ChEMBL structure checker as a check, with a penalty threshold.
+- Pydantic types for single records (`SMILES`, `InChIKey`).
+- Checks registered by name, so schemas can be written in YAML.
 
 ## Learn the ideas behind it
 
 pandera-chem grew out of the free course
-[Data Engineering for Cheminformatics](https://monstrous.com.ng/learn/), which builds these checks
-by hand in Module 6 (validating molecules) and Module 12 (validating data with Pydantic and
-Pandera), and the quarantine in Module 10 (pipelines that survive failure).
+[Data Engineering for Cheminformatics](https://monstrous.com.ng/learn/), which builds these checks by
+hand: validating molecules in Module 6, the quarantine in Module 10, and validating whole tables with
+Pydantic and Pandera in Module 12.
 
 ## Contributing
 
-Issues and pull requests are welcome. To work on it:
+Bug reports, suggestions and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md). The example above is run by
+the tests, which check that this README shows what it really prints.
 
-```bash
-git clone https://github.com/David-Alobo/pandera-chem.git
-cd pandera-chem
-uv sync
-uv run pytest
-uv run ruff check . && uv run ruff format --check .
-```
+## Citing
 
-The example above is run by the tests, which check that this README shows what it really prints.
+If pandera-chem helps your research, please cite it: GitHub's **Cite this repository** button (from
+[CITATION.cff](CITATION.cff)) gives the reference in APA and BibTeX.
 
 ## Licence
 
