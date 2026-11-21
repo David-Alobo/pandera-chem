@@ -5,7 +5,7 @@
 - Repository: banner, issue and pull-request forms, contributing guide, code of conduct, citation
   file, Dependabot, pre-commit, and test coverage in CI (at least 95%).
 
-## 0.1.0 (unreleased)
+## 0.1.0 (21 November 2026)
 
 First version.
 
