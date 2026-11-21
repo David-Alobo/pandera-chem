@@ -77,17 +77,20 @@ class Split:
     report: Report
 
 
-def _reason(column: object, check: object) -> str:
-    """One failure's reason, as "column: check" (or just the check for a table-wide one).
+def _reason(context: object, column: object, check: object) -> str:
+    """One failure's reason: "column: check", or just the check for a table-wide one.
 
     Args:
-        column: The column that failed, or None/NaN for a table-wide check.
+        context: Where Pandera ran the check: "DataFrameSchema" for a table-wide check.
+        column: The column that failed (Pandera repeats a table-wide failure for each column).
         check: The check's name.
 
     Returns:
         The reason.
     """
-    return str(check) if pd.isna(column) else f"{column}: {check}"
+    if context == "DataFrameSchema" or pd.isna(column):
+        return str(check)
+    return f"{column}: {check}"
 
 
 def _warnings(caught: list[warnings.WarningMessage]) -> list[str]:
@@ -146,8 +149,13 @@ def split(df: pd.DataFrame, schema: pa.DataFrameSchema) -> Split:
         reasons = (
             failures.assign(
                 reason=[
-                    _reason(c, k)
-                    for c, k in zip(failures["column"], failures["check"], strict=True)
+                    _reason(s, c, k)
+                    for s, c, k in zip(
+                        failures["schema_context"],
+                        failures["column"],
+                        failures["check"],
+                        strict=True,
+                    )
                 ]
             )
             .drop_duplicates(["index", "reason"])

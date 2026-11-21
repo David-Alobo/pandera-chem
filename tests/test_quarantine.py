@@ -112,3 +112,15 @@ def test_split_is_a_partition(picks):
     assert kept.isdisjoint(set_aside)
     assert kept | set_aside == set(table.index)
     assert result.report.reconciles
+
+
+def test_a_table_wide_failure_gives_one_reason():
+    schema = pa.DataFrameSchema(
+        {"smiles": pa.Column(str), "key": pa.Column(str, pc.inchikey_format())},
+        checks=[pc.inchikey_matches("smiles", "key")],
+    )
+    table = pd.DataFrame(
+        {"smiles": ["CCO", "CCN", "CCC"], "key": [pc.inchikey("CCO"), pc.inchikey("CCO"), "BAD"]}
+    )
+    reasons = pc.split(table, schema).quarantined["reasons"].to_dict()
+    assert reasons == {1: "inchikey_matches", 2: "key: inchikey_format"}

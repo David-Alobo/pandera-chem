@@ -31,12 +31,14 @@ with their reasons, and gives you counts that must add up.
 pip install pandera-chem
 ```
 
-or `uv add pandera-chem`. It needs Python 3.11 or newer, and installs Pandera and RDKit.
+or `uv add pandera-chem` (in a notebook: `!pip install pandera-chem`). It needs Python 3.11 or
+newer, and installs Pandera and RDKit.
 
 ## Example
 
 A table of measured compounds, with a few of the problems real data has:
 
+<!-- example: examples/quickstart.py -->
 ```python
 import pandas as pd
 import pandera.pandas as pa
@@ -116,6 +118,10 @@ compound_id                                           reasons
 The checks work in plain Pandera too: `schema.validate(table)` raises an error naming the check that
 failed, as Pandera always does.
 
+**Next: the [usage guide](docs/usage.md)** shows checking strictly, running pandera-chem in a
+pipeline (saving the quarantine, logging, stopping a bad run), rules for a screening library,
+tables with InChIKeys, and writing a check of your own.
+
 ## The checks
 
 On a column of SMILES:
@@ -176,8 +182,8 @@ Pydantic and Pandera in Module 12.
 ## Contributing
 
 Bug reports, suggestions and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
-Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md). The example above is run by
-the tests, which check that this README shows what it really prints.
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md). Every example in this README
+and the usage guide is run by the tests, which check that the page shows what it really prints.
 
 ## Citing
 

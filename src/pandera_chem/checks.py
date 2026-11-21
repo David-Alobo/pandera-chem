@@ -353,7 +353,13 @@ def inchikey_format(**options: Any) -> pa.Check:
     Returns:
         The check.
     """
-    return pa.Check.str_matches(INCHIKEY.pattern, name="inchikey_format", **options)
+    return pa.Check(
+        lambda value: isinstance(value, str) and INCHIKEY.match(value) is not None,
+        element_wise=True,
+        name="inchikey_format",
+        description="not shaped like a standard InChIKey",
+        **options,
+    )
 
 
 def inchikey_matches(smiles_column: str, inchikey_column: str, **options: Any) -> pa.Check:

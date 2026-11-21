@@ -30,8 +30,9 @@ Optionally, run the same checks before every commit:
 - `src/pandera_chem/checks.py`: the checks. Each is a function that returns a `pandera.Check`.
 - `src/pandera_chem/quarantine.py`: `split()` and its report.
 - `src/pandera_chem/_mol.py`: parsing, shared and cached by every check.
-- `examples/quickstart.py`: the README's example; `tests/test_readme.py` checks the README shows
-  exactly this code and what it prints.
+- `examples/`: every example in the README and `docs/usage.md`; `tests/test_examples.py` runs each
+  one and checks the page shows exactly its code and what it prints. Add a script there for any new
+  example, mark it in the page with `<!-- example: examples/name.py -->`, and paste its output.
 
 ## Rules for a new check
 
