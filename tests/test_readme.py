@@ -24,3 +24,12 @@ def test_readme_shows_what_the_example_prints():
         [sys.executable, str(EXAMPLE)], capture_output=True, text=True, check=True, cwd=ROOT
     )
     assert block("text") == run.stdout
+
+
+def test_version_matches_pyproject():
+    import tomllib
+
+    import pandera_chem
+
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    assert pandera_chem.__version__ == project["version"]
