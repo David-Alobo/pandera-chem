@@ -1,0 +1,59 @@
+[project]
+name = "pandera-chem"
+version = "0.1.0"
+description = "Chemistry checks for Pandera: validate tables of molecules with RDKit, and quarantine the bad rows with their reasons"
+readme = "README.md"
+authors = [
+    { name = "David.Alobo", email = "davidalobo01@gmail.com" }
+]
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["cheminformatics", "pandera", "rdkit", "data-quality", "data-validation", "smiles", "chemistry"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pandera[pandas]>=0.24",
+    "rdkit>=2024.9",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.4,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.17",
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/David-Alobo/pandera-chem"
+Issues = "https://github.com/David-Alobo/pandera-chem/issues"
+Course = "https://monstrous.com.ng/learn/"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "D", "SIM"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
