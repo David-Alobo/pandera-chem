@@ -1,6 +1,6 @@
 [project]
 name = "pandera-chem"
-version = "0.2.0"
+version = "0.3.0"
 description = "Chemistry checks for Pandera: validate tables of molecules with RDKit, and quarantine the bad rows with their reasons"
 readme = "README.md"
 authors = [
@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["cheminformatics", "pandera", "rdkit", "data-quality", "data-validation", "smiles", "chemistry"]
+keywords = ["cheminformatics", "pandera", "rdkit", "data-quality", "data-validation", "smiles", "chemistry", "bioactivity", "units"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -27,6 +27,9 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+units = ["pint>=0.24"]
+
 [project.scripts]
 pandera-chem = "pandera_chem.cli:main"
 
@@ -37,6 +40,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "hypothesis>=6.170.17",
+    "pint>=0.24",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.6",

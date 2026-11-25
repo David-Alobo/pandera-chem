@@ -197,6 +197,15 @@ On InChIKeys:
 | `inchikey_format()` | the value is not shaped like a standard InChIKey |
 | `inchikey_matches("smiles", "inchikey")` | (table-wide) a row's InChIKey is not the one its SMILES gives |
 
+On activity data (IC50, Ki, EC50...), with `pip install "pandera-chem[units]"`, which adds
+[pint](https://pint.readthedocs.io/) to read units:
+
+| Check | Fails when |
+|---|---|
+| `concentration_units()` | the unit is not a molar concentration, however it is spelled: `ug/mL` (a mass per volume), `nm` (a nanometre, a common slip for nM), `%`, `n/a` |
+| `pchembl_matches("value", "units", "pchembl")` | (table-wide) the stored pChEMBL is not 9 − log10(value in nM); with `relation_column=`, only exact ("=") values are compared |
+| `activity_in_range("value", "units")` | (table-wide) the value, converted to nM, is below 1 pM or above 1 M (or zero or negative): usually a unit slip |
+
 Every check can be named in a rules file, as can Pandera's own `in_range`, `isin`, `notin`, `gt`,
 `ge`, `lt`, `le`, `eq`, `ne` and `str_*` checks.
 
@@ -228,6 +237,7 @@ Ideas for later versions; [suggest one](https://github.com/David-Alobo/pandera-c
 - The ChEMBL structure checker as a check, with a penalty threshold.
 - Pydantic types for single records (`SMILES`, `InChIKey`).
 - Structure pictures of the quarantined molecules in the report card.
+- More activity checks (assay types, relations), and converting mass units with a molecular weight.
 
 ## Learn the ideas behind it
 

@@ -15,6 +15,7 @@ Quick start::
 
 from ._mol import clear_cache, inchikey, problems
 from ._version import __version__
+from .activity import activity_in_range, concentration_units, pchembl_matches
 from .checks import (
     INCHIKEY,
     ORGANIC,
@@ -40,8 +41,10 @@ __all__ = [
     "Report",
     "RulesError",
     "Split",
+    "activity_in_range",
     "allowed_elements",
     "clear_cache",
+    "concentration_units",
     "heavy_atoms",
     "inchikey",
     "inchikey_format",
@@ -50,6 +53,7 @@ __all__ = [
     "mol_weight",
     "neutral",
     "no_substructures",
+    "pchembl_matches",
     "problems",
     "report_dict",
     "report_html",

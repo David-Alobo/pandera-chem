@@ -79,7 +79,7 @@ def test_rules_are_read_from_yaml(tmp_path):
 
 def test_every_chemistry_check_can_be_named_in_a_rules_file():
     assert set(CHEM_CHECKS) == {n for n in pc.__all__ if n in CHEM_CHECKS}
-    assert len(CHEM_CHECKS) == 11
+    assert len(CHEM_CHECKS) == 14  # 11 molecule checks and 3 activity checks
 
 
 def test_dtypes_and_column_settings():

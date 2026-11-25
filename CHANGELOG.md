@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+### Added
+
+- **Activity-data checks**, with the optional extra `pip install "pandera-chem[units]"` (pint):
+  - `concentration_units()`: the unit is a molar concentration, however it is spelled (nM, uM,
+    µM with either mu, mol/L...); fails ug/mL, nm, %, n/a;
+  - `pchembl_matches(value, units, pchembl, relation_column=None, tolerance=0.01)`: table-wide,
+    the stored pChEMBL equals 9 - log10(value in nM); with a relation column, only "=" rows;
+  - `activity_in_range(value, units, min_nm=0.001, max_nm=1e9)`: table-wide, the value in nM is
+    plausible and above zero (catches unit slips).
+  All three can be named in rules files. Without pint they say how to install it; the rest of the
+  package works as before.
+- Usage guide section 10, with a tested example.
+
 ## 0.2.0 (21 November 2026)
 
 ### Added

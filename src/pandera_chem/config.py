@@ -32,6 +32,7 @@ from typing import Any
 import pandera.pandas as pa
 import yaml
 
+from . import activity
 from . import checks as chem
 
 # pandera-chem's checks, by the name used in a rules file
@@ -51,6 +52,13 @@ CHEM_CHECKS: dict[str, Callable[..., pa.Check]] = {
         "inchikey_matches",
     )
 }
+# the activity checks (they need pint, and say how to install it when used)
+CHEM_CHECKS.update(
+    {
+        name: getattr(activity, name)
+        for name in ("concentration_units", "pchembl_matches", "activity_in_range")
+    }
+)
 # Pandera's own checks that a rules file may use
 PANDERA_CHECKS = (
     "eq",

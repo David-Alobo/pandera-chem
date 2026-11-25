@@ -15,6 +15,7 @@ this page shows exactly the code and what it prints.
 - [7. Rules in a file](#7-rules-in-a-file)
 - [8. From the command line](#8-from-the-command-line)
 - [9. In continuous integration](#9-in-continuous-integration)
+- [10. Activity data: values, units and pChEMBL](#10-activity-data-values-units-and-pchembl)
 - [Things to know](#things-to-know)
 
 ## Install
@@ -451,6 +452,80 @@ jobs:
 ```
 
 To allow a small share of bad rows while they are being fixed, add `--max-quarantined 0.02`.
+
+## 10. Activity data: values, units and pChEMBL
+
+The molecules are only half of a bioactivity table; the measurements next to them break in their
+own ways. A unit that is not a concentration at all, a value entered with the wrong unit (a
+thousand or a million times off), a stored pChEMBL that no longer matches its value. Three checks
+read the units with [pint](https://pint.readthedocs.io/), so install the extra first:
+
+```bash
+pip install "pandera-chem[units]"
+```
+
+- `concentration_units()` goes on the units column. It passes any spelling of a molar
+  concentration (`nM`, `uM`, `µM` with the micro sign or the Greek mu, `mM`, `mol/L`) and fails
+  units that are not one: `ug/mL` (a mass per volume, which needs a molecular weight to convert),
+  `nm` (a nanometre: pint reads exactly what is written), `%`, `n/a`. To allow only some
+  spellings as well, add Pandera's `isin`.
+- `pchembl_matches(value, units, pchembl)` is table-wide: pChEMBL is 9 − log10 of the value in
+  nM, so 1 nM is 9 and 1 µM is 6. Give `relation_column=` and only exact values (`=`) are
+  compared, since a value reported as `> 10 µM` has no exact pChEMBL.
+- `activity_in_range(value, units)` is table-wide: the value, in nM, must be between `min_nm` and
+  `max_nm` (by default 1 pM to 1 M), and above zero.
+
+<!-- example: examples/activity.py -->
+```python
+import pandas as pd
+import pandera.pandas as pa
+
+import pandera_chem as pc
+
+measurements = pd.DataFrame(
+    {
+        "smiles": ["CC(=O)Nc1ccc(O)cc1"] * 7,
+        "value": [50, 0.05, 4.2, 50, 1e-6, 10, 250],
+        "units": ["nM", "µM", "uM", "mM", "nM", "nm", "ug/mL"],
+        "relation": ["=", "=", ">", "=", "=", "=", "="],
+        "pchembl": [7.30, 7.30, None, 7.30, None, 8.00, 6.00],
+    }
+)
+schema = pa.DataFrameSchema(
+    {
+        "smiles": pa.Column(str, pc.valid_smiles()),
+        "value": pa.Column(float),
+        "units": pa.Column(str, pc.concentration_units()),
+        "relation": pa.Column(str, pa.Check.isin(["=", "<", ">"])),
+        "pchembl": pa.Column(float, nullable=True),
+    },
+    checks=[
+        pc.pchembl_matches("value", "units", "pchembl", relation_column="relation"),
+        pc.activity_in_range("value", "units"),  # 1 pM to 1 M once in nM
+    ],
+)
+
+result = pc.split(measurements, schema)
+print(result.quarantined[["value", "units", "pchembl", "reasons"]].to_string())
+```
+
+```text
+        value  units  pchembl                     reasons
+3   50.000000     mM      7.3             pchembl_matches
+4    0.000001     nM      NaN           activity_in_range
+5   10.000000     nm      8.0  units: concentration_units
+6  250.000000  ug/mL      6.0  units: concentration_units
+```
+
+The first three rows pass: 50 nM and 0.05 µM (the same value) both have pChEMBL 7.30, and 4.2 µM
+is reported as `>`, so its pChEMBL is not compared. Row 3 shows why `pchembl_matches` earns its
+place: 50 mM is a plausible weak activity, so the range check lets it through, but its pChEMBL of
+7.3 fits 50 *nM*. The unit was entered wrongly, or the pChEMBL was copied from another row; either
+way a person should look. Each problem is reported once: the rows whose unit is not a
+concentration are not reported again by the two table-wide checks.
+
+The three checks can be named in a rules file too (`concentration_units` under a column;
+`pchembl_matches` and `activity_in_range`, with their column names, under the table's `checks`).
 
 ## Things to know
 
