@@ -70,11 +70,14 @@ class Split:
         valid: The rows that passed, as validated (and coerced) by the schema.
         quarantined: The rows that failed, unchanged, with a ``reasons`` column added.
         report: The counts.
+        schema: The schema the table was checked against (the report card uses it to show,
+            in each molecule's picture, what a check's settings blamed).
     """
 
     valid: pd.DataFrame
     quarantined: pd.DataFrame
     report: Report
+    schema: pa.DataFrameSchema | None = None
 
 
 def _reason(context: object, column: object, check: object) -> str:
@@ -106,19 +109,22 @@ def _warnings(caught: list[warnings.WarningMessage]) -> list[str]:
     return list(dict.fromkeys(messages))
 
 
-def _all_valid(df: pd.DataFrame, valid: pd.DataFrame, caught: list) -> Split:
+def _all_valid(
+    df: pd.DataFrame, valid: pd.DataFrame, caught: list, schema: pa.DataFrameSchema
+) -> Split:
     """The split of a table in which every row passed.
 
     Args:
         df: The table given to :func:`split`.
         valid: The table as validated by the schema.
         caught: Warnings recorded while validating.
+        schema: The schema used.
 
     Returns:
         Every row valid, none quarantined.
     """
     empty = df.iloc[0:0].assign(**{REASONS: pd.Series(dtype=str)})
-    return Split(valid, empty, Report(len(df), len(df), 0, {}, _warnings(caught)))
+    return Split(valid, empty, Report(len(df), len(df), 0, {}, _warnings(caught)), schema)
 
 
 def split(df: pd.DataFrame, schema: pa.DataFrameSchema) -> Split:
@@ -141,7 +147,7 @@ def split(df: pd.DataFrame, schema: pa.DataFrameSchema) -> Split:
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", SchemaWarning)
         try:
-            return _all_valid(df, schema.validate(df, lazy=True), caught)
+            return _all_valid(df, schema.validate(df, lazy=True), caught, schema)
         except SchemaErrors as error:
             failures = error.failure_cases
             if failures["index"].isna().any():
@@ -168,4 +174,4 @@ def split(df: pd.DataFrame, schema: pa.DataFrameSchema) -> Split:
     warned = _warnings(caught)
     counts = Counter(r for joined in reasons for r in joined.split("; "))
     report = Report(len(df), int((~bad).sum()), int(bad.sum()), dict(counts.most_common()), warned)
-    return Split(valid, quarantined, report)
+    return Split(valid, quarantined, report, schema)

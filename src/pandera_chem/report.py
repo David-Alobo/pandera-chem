@@ -10,7 +10,11 @@ import json
 from html import escape
 from typing import Any
 
+import pandas as pd
+
 from . import __version__
+from ._mol import inchikey
+from .drawing import MOLECULE_CHECKS, explain, first_rows, picture
 from .quarantine import REASONS, Split
 
 MAX_ROWS = 200  # quarantined rows shown in the HTML report; the CSV has them all
@@ -45,6 +49,39 @@ td.n { text-align: right; font-variant-numeric: tabular-nums; width: 5em; }
 .scroll table td, .scroll table th { white-space: nowrap; }
 code { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 ul.warnings { padding-left: 20px; } ul.warnings li { margin-bottom: 6px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+         gap: 14px; }
+.card { display: flex; gap: 16px; background: var(--card); border: 1px solid var(--line);
+        border-radius: 14px; padding: 14px; min-width: 0; }
+.pic { flex: 0 0 auto; }
+.pic svg, .pic .nopic { display: block; width: 176px; height: 128px; border-radius: 10px;
+                        border: 1px solid var(--line); background: #fff; }
+.pic .nopic { display: grid; place-items: center; text-align: center; color: #8a8ea6;
+              font-size: 13px; padding: 10px; }
+.info { min-width: 0; flex: 1; }
+.rowno { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+         color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.chip { font-size: 12.5px; border-radius: 999px; padding: 2px 10px; line-height: 1.6;
+        background: rgba(180, 35, 24, .1); color: var(--bad);
+        border: 1px solid rgba(180, 35, 24, .25); }
+.chip i { font-style: normal; opacity: .75; }
+.chip.col { background: rgba(161, 92, 7, .1); color: var(--warn);
+            border-color: rgba(161, 92, 7, .25); }
+.chip.table { background: rgba(124, 92, 255, .12); color: var(--bar);
+              border-color: rgba(124, 92, 255, .3); }
+.why { margin: 0 0 8px; font-size: 14px; }
+.why span { display: block; }
+dl.fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0;
+            font-size: 13px; }
+dl.fields dt { color: var(--muted); }
+dl.fields dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .cards { grid-template-columns: 1fr; }
+  .card { flex-direction: column; }
+  .pic svg { width: 100%; max-width: 264px; height: auto; aspect-ratio: 11 / 8; }
+  .pic .nopic { width: 100%; height: 44px; }
+}
 footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
 """
 
@@ -123,35 +160,135 @@ def _reasons_table(by_reason: dict[str, int], rows_in: int) -> str:
     return f"<table class='reasons'>{head}{''.join(rows)}</table>"
 
 
-def _rows_table(result: Split) -> str:
-    """The quarantined rows (the first :data:`MAX_ROWS`), reasons first.
+def smiles_column(result: Split) -> str | None:
+    """The column of SMILES to draw: the one the schema puts molecule checks on.
 
     Args:
         result: What :func:`pandera_chem.split` returned.
 
     Returns:
-        The table's HTML, or a sentence if no row was quarantined.
+        The column's name, or "smiles" if the table has one and the schema does not say, or
+        None if there is nothing to draw.
+    """
+    if result.schema is not None:
+        for name, column in result.schema.columns.items():
+            if any(c.name in MOLECULE_CHECKS for c in column.checks):
+                return str(name)
+    return "smiles" if "smiles" in result.quarantined.columns else None
+
+
+def _chip(reason: str, smiles_col: str | None) -> str:
+    """One reason as a coloured label: the check's name, then the column it failed on.
+
+    Args:
+        reason: A reason, "column: check" or just "check" for a table-wide check.
+        smiles_col: The SMILES column (its failures are drawn in red; other columns' in amber).
+
+    Returns:
+        The label's HTML.
+    """
+    if ": " not in reason:
+        return f"<span class='chip table'>{escape(reason)} <i>table</i></span>"
+    column, check = reason.split(": ", 1)
+    kind = "chip" if column == smiles_col else "chip col"
+    return f"<span class='{kind}'>{escape(check)} <i>{escape(column)}</i></span>"
+
+
+def _card(
+    label: object,
+    row: pd.Series,
+    columns: list[str],
+    smiles_col: str | None,
+    stats: dict,
+    first: dict,
+) -> str:
+    """One quarantined row as a card: its picture, its reasons, what is wrong, its values.
+
+    Args:
+        label: The row's label.
+        row: The row, with its reasons.
+        columns: The row's data columns, in table order (reasons excluded).
+        smiles_col: The SMILES column to draw, or None for no picture.
+        stats: Each molecule check's settings, by name.
+        first: Each InChIKey's first row, for ``unique_molecules``.
+
+    Returns:
+        The card's HTML.
+    """
+    reasons = [r for r in str(row[REASONS]).split("; ") if r]
+    pic, captions = "", []
+    smiles = row[smiles_col] if smiles_col else None
+    if smiles_col and isinstance(smiles, str):
+        failed = [
+            r.split(": ", 1)[1]
+            for r in reasons
+            if r.startswith(f"{smiles_col}: ") and r.split(": ", 1)[1] in MOLECULE_CHECKS
+        ]
+        repeats = first.get(inchikey(smiles)) if "unique_molecules" in failed else None
+        mol, why = explain(smiles, failed, stats, None if repeats == label else repeats)
+        captions = why.captions
+        pic = picture(mol, why) if mol is not None else "<div class='nopic'>cannot be drawn</div>"
+        pic = f"<div class='pic'>{pic}</div>"
+    elif smiles_col:
+        pic = "<div class='pic'><div class='nopic'>no SMILES</div></div>"
+    chips = "".join(_chip(r, smiles_col) for r in reasons)
+    why_html = "".join(f"<span>{escape(c)}</span>" for c in captions)
+    fields = "".join(
+        f"<dt>{escape(str(c))}</dt><dd>"
+        + (f"<code>{escape(str(row[c]))}</code>" if c == smiles_col else escape(str(row[c])))
+        + "</dd>"
+        for c in columns
+    )
+    return (
+        f"<article class='card'>{pic}<div class='info'>"
+        f"<div class='rowno'>Row {escape(str(label))}</div>"
+        f"<div class='chips'>{chips}</div>"
+        + (f"<p class='why'>{why_html}</p>" if why_html else "")
+        + f"<dl class='fields'>{fields}</dl></div></article>"
+    )
+
+
+def _rows_table(result: Split, pictures: bool = True) -> str:
+    """The quarantined rows (the first :data:`MAX_ROWS`), one card each.
+
+    Args:
+        result: What :func:`pandera_chem.split` returned.
+        pictures: Whether to draw each row's molecule, with what is wrong highlighted.
+
+    Returns:
+        The cards' HTML, or a sentence if no row was quarantined.
     """
     q = result.quarantined
     if q.empty:
         return "<p>No rows were quarantined.</p>"
-    columns = [REASONS] + [c for c in q.columns if c != REASONS]
-    head = "<tr><th>Row</th>" + "".join(f"<th>{escape(str(c))}</th>" for c in columns) + "</tr>"
-    body = []
-    for index, row in q.head(MAX_ROWS).iterrows():
-        cells = "".join(f"<td>{escape(str(row[c]))}</td>" for c in columns)
-        body.append(f"<tr><td>{escape(str(index))}</td>{cells}</tr>")
+    column = smiles_column(result) if pictures else None
+    if column is not None and column not in q.columns:
+        column = None
+    stats, first = {}, {}
+    if column is not None:
+        if result.schema is not None and column in result.schema.columns:
+            stats = {c.name: c.statistics or {} for c in result.schema.columns[column].checks}
+        everything = pd.concat([result.valid[[column]], q[[column]]]).sort_index()
+        first = first_rows(everything[column].to_dict())
+    columns = [c for c in q.columns if c != REASONS]
+    cards = "".join(
+        _card(label, row, columns, column, stats, first)
+        for label, row in q.head(MAX_ROWS).iterrows()
+    )
     more = ""
     if len(q) > MAX_ROWS:
         more = (
             f"<p>Showing the first {MAX_ROWS} of {len(q)} rows; "
             "the quarantine file has them all.</p>"
         )
-    return f'<div class="scroll"><table>{head}{"".join(body)}</table></div>{more}'
+    return f"<div class='cards'>{cards}</div>{more}"
 
 
 def report_html(
-    result: Split, title: str = "Data quality report", source: str | None = None
+    result: Split,
+    title: str = "Data quality report",
+    source: str | None = None,
+    pictures: bool = True,
 ) -> str:
     """The report as one self-contained web page.
 
@@ -159,6 +296,8 @@ def report_html(
         result: What :func:`pandera_chem.split` returned.
         title: The page's title.
         source: Where the table came from (e.g. a file name), shown under the title.
+        pictures: Whether to draw each quarantined molecule, with the atoms that failed a check
+            highlighted and a short caption (only for a table with a SMILES column).
 
     Returns:
         The HTML document.
@@ -207,7 +346,7 @@ def report_html(
 <h2>Warnings</h2>
 {warnings}
 <h2>Quarantined rows</h2>
-{_rows_table(result)}
+{_rows_table(result, pictures)}
 <footer>Made by pandera-chem {escape(__version__)}.</footer>
 </main>
 </body>

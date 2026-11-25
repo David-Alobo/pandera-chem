@@ -1,6 +1,6 @@
 [project]
 name = "pandera-chem"
-version = "0.3.0"
+version = "0.4.0"
 description = "Chemistry checks for Pandera: validate tables of molecules with RDKit, and quarantine the bad rows with their reasons"
 readme = "README.md"
 authors = [

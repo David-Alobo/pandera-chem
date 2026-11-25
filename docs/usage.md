@@ -341,7 +341,8 @@ columns:
 ```
 
 `pc.load_schema()` turns it into an ordinary Pandera schema, and `pc.report_html()` and
-`pc.report_json()` write the report card:
+`pc.report_json()` write the report card (`report_html(result, pictures=False)` leaves out the
+molecule pictures):
 
 <!-- example: examples/rules_file.py -->
 ```python
@@ -406,7 +407,7 @@ In the output folder (`--out`, default `pandera-chem-out`):
 |---|---|
 | `compounds.valid.csv` | the rows that passed |
 | `compounds.quarantine.csv` | the rows that failed, with a `reasons` column |
-| `compounds.report.html` | the report card: open it in a browser, attach it to a CI run or email it |
+| `compounds.report.html` | the report card: open it in a browser, attach it to a CI run or email it. Each quarantined row is a card with its molecule drawn and the atoms that failed a check highlighted (`--no-pictures` leaves the pictures out) |
 | `compounds.report.json` | the same counts for programs |
 
 **Exit codes**, for scripts and CI: `0` when the share of quarantined rows is within

@@ -185,7 +185,7 @@ def check(args: argparse.Namespace) -> int:
     result.quarantined.to_csv(out / f"{stem}.quarantine.csv", index=False)
     title = args.title or f"Data quality report: {data.name}"
     (out / f"{stem}.report.html").write_text(
-        report_html(result, title, data.name), encoding="utf-8"
+        report_html(result, title, data.name, pictures=not args.no_pictures), encoding="utf-8"
     )
     (out / f"{stem}.report.json").write_text(report_json(result, data.name), encoding="utf-8")
 
@@ -244,6 +244,11 @@ def parser() -> argparse.ArgumentParser:
     )
     c.add_argument("--smiles-column", default="smiles", help="for an SDF: the SMILES column's name")
     c.add_argument("--title", help="the report's title")
+    c.add_argument(
+        "--no-pictures",
+        action="store_true",
+        help="leave the molecule pictures out of the report card",
+    )
     c.set_defaults(run=check)
 
     i = sub.add_parser("init", help="write a starter rules file")

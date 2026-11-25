@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 (unreleased)
+
+### Added
+
+- **Pictures in the report card.** Each quarantined row is now a card: the molecule drawn with
+  RDKit (inline SVG, still one self-contained file), the atoms or bonds that failed a check
+  highlighted (the disallowed element, the extra fragment, the charged atoms, the matched
+  forbidden group, the stereocentres and double bonds with no configuration), a short caption
+  ("element not allowed: Se", "same molecule as row 0", or RDKit's reason for an unreadable
+  SMILES), the reasons as coloured labels and the row's values. Two cards per line on a laptop,
+  one on a phone. Turn off with `report_html(result, pictures=False)` or `--no-pictures`.
+- `Split.schema`: the schema `split()` used, so the report can read each check's settings.
+
 ## 0.3.0 (25 November 2026)
 
 ### Added

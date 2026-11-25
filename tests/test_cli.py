@@ -137,3 +137,14 @@ def test_version(capsys):
     with pytest.raises(SystemExit):
         cli.main(["--version"])
     assert "pandera-chem" in capsys.readouterr().out
+
+
+def test_check_can_leave_pictures_out(files):
+    cli.main(["check", "compounds.csv", "--rules", "rules.yaml", "--out", "with"])
+    cli.main(
+        ["check", "compounds.csv", "--rules", "rules.yaml", "--out", "without", "--no-pictures"]
+    )
+    assert "class='pic'" in (files / "with" / "compounds.report.html").read_text(encoding="utf-8")
+    assert "class='pic'" not in (files / "without" / "compounds.report.html").read_text(
+        encoding="utf-8"
+    )

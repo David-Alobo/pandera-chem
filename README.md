@@ -162,12 +162,14 @@ FAIL: 71.4% of rows quarantined (allowed: 0.0%)
 ```
 
 It writes the valid rows, the quarantined rows with their reasons, and a **report card**: a web page
-with the counts, the reasons and the bad rows, and the same as JSON. It ends with exit code 1 when
+with the counts, the reasons and a card for each bad row, with a **picture of the molecule and what
+is wrong highlighted** (the disallowed atom, the counter-ion, the forbidden group, the stereocentre
+with no configuration), and the same as JSON. It ends with exit code 1 when
 more rows are quarantined than `--max-quarantined` allows (none, unless you say otherwise), so it can
 stop a CI job. It reads CSV, TSV, Parquet and SDF files. `pandera-chem init` writes a starter rules
 file to edit.
 
-<p align="center"><img src=".github/report-card.png" alt="The report card for the example: 7 rows in, 2 valid, 5 quarantined, 1 warning, counts reconcile; a table of reasons with bars; the warning; and the quarantined rows with their reasons." width="85%"></p>
+<p align="center"><img src=".github/report-card.png" alt="The report card for the example: 7 rows in, 2 valid, 5 quarantined, 1 warning, counts reconcile; a table of reasons with bars; the warning; and a card for each quarantined row with its molecule drawn and the problem highlighted." width="85%"></p>
 
 **Next: the [usage guide](docs/usage.md)** shows checking strictly, running pandera-chem in a
 pipeline (saving the quarantine, logging, stopping a bad run), rules for a screening library,
@@ -236,7 +238,6 @@ Ideas for later versions; [suggest one](https://github.com/David-Alobo/pandera-c
 - Polars data frames, which Pandera also supports.
 - The ChEMBL structure checker as a check, with a penalty threshold.
 - Pydantic types for single records (`SMILES`, `InChIKey`).
-- Structure pictures of the quarantined molecules in the report card.
 - More activity checks (assay types, relations), and converting mass units with a molecular weight.
 
 ## Learn the ideas behind it
